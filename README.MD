@@ -13,7 +13,7 @@ El sistema evalúa el rendimiento semanal de cada fuente y ajusta dinámicamente
 
 ## 🧮 El Modelo Matemático
 
-El programa calcula la probabilidad final de un resultado $R \in \{1, X, 2\}$ mediante una media ponderada normalizada.
+El programa calcula la probabilidad final de un resultado $R \in {1, X, 2}$ mediante una media ponderada normalizada.
 
 Primero, calcula el peso de cada fuente $W_i$ basándose en su tasa de aciertos histórica $T_i$:
 
