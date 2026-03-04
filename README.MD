@@ -44,21 +44,20 @@ $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 El sistema está diseñado para un flujo de trabajo minimalista de dos pasos semanales:
 
 1. Preparación y Cálculo:
-    1. Rellena el archivo data/entrada_viernes.json con los partidos de la jornada y las cuotas/probabilidades de tus fuentes (ej. Pinnacle, Opta, Forebet).
+    1. Rellena el archivo *data/entrada_viernes.json* con los partidos de la jornada y las cuotas/probabilidades de tus fuentes (ej. Pinnacle, Opta, Forebet).
     2. Ejecuta el calculador:
-```Bash
-python viernes_calcular.py
-```
+        ```Bash
+        python calcular_probs.py
+        ```
     3. El programa imprimirá en consola los porcentajes consolidados y precisos para cada posible resultado (1, X, 2).
 
 2. Retroalimentación del Modelo:
-    1. Tras finalizar la jornada, abre data/resultados_lunes.json y sustituye las incógnitas por los resultados reales ("1", "X" o "2").
+    1. Tras finalizar la jornada, abre *data/resultados_lunes.json* y sustituye las incógnitas por los resultados reales ("1", "X" o "2").
     2. Ejecuta el actualizador:
-```Bash
-python lunes_actualizar.py
-```
-
-    3. El sistema evaluará las predicciones hechas el viernes, sumará los aciertos/fallos, actualizará el archivo mis_fuentes.json y mostrará el nuevo ranking de fiabilidad de tus fuentes.
+        ```Bash
+        python actualizar_fuentes.py
+        ```
+    3. El sistema evaluará las predicciones hechas el viernes, sumará los aciertos/fallos, actualizará el archivo *mis_fuentes.json* y mostrará el nuevo ranking de fiabilidad de tus fuentes.
 
 ## 📌 Fuentes Recomendadas Integradas
 El modelo está configurado inicialmente para balancear el "dinero inteligente" del mercado con simulaciones de datos puros:
