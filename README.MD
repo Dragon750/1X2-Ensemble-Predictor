@@ -7,20 +7,26 @@ El sistema evalúa el rendimiento semanal de cada fuente y ajusta dinámicamente
 ## ✨ Características Principales
 
 * **Limpieza de Overround Automática:** El algoritmo detecta si la entrada es una probabilidad (ej. `0.45`) o una cuota de apuestas (ej. `2.10`). Si es una cuota, calcula la probabilidad implícita y elimina automáticamente la comisión (margen) de la casa para trabajar con probabilidades puras sobre 1.
-* **Actualización Dinámica de Pesos:** Las fuentes compiten entre sí. Tras cada jornada, el programa evalúa quién acertó y recalcula el peso de cada fuente para la próxima predicción.
+* **Evaluación Probabilística (Brier Score):** El sistema no evalúa las predicciones como un simple "acierto o fallo". Utiliza el *Brier Score* invertido para castigar severamente a las fuentes que fallan predicciones en las que tenían mucha confianza, y premiar a aquellas que son precisas y calibradas.
+* **Actualización Dinámica de Pesos:** Las fuentes compiten entre sí. Tras cada jornada, el programa evalúa la puntuación Brier de cada fuente y recalcula su peso para la próxima predicción.
 * **Arquitectura Escalable:** El código está completamente separado de los datos (arquitectura basada en JSON), permitiendo añadir infinitas fuentes o partidos sin tocar una sola línea de lógica.
 * **Manejo de Datos Faltantes:** Si una fuente no publica datos una semana, el sistema recalcula los pesos proporcionalmente solo con las fuentes disponibles.
 
 ## 🧮 El Modelo Matemático
 
-El programa calcula la probabilidad final de un resultado $R \in \lbrace 1, X, 2 \rbrace$ mediante una media ponderada normalizada.
+El programa utiliza una media ponderada normalizada, pero los pesos se calculan evaluando la calidad histórica de las probabilidades predichas mediante el **Brier Score**.
 
-Primero, calcula el peso de cada fuente $W_i$ basándose en su tasa de aciertos histórica $T_i$:
+Para cada partido, se calcula la diferencia al cuadrado entre la probabilidad predicha $P_i$ y el resultado real $O_i$ (donde $O_i = 1$ si el evento ocurre y $0$ si no):
 
+$$Brier = \sum_{i \in \{1, X, 2\}} (P_i - O_i)^2$$
+
+El sistema invierte esta puntuación para convertirla en "Puntos de Calidad" (de 0 a 1, siendo 1 la perfección):
+$$Puntos = 1 - \frac{Brier}{2}$$
+
+Estos puntos acumulados históricamente ($T_i$) dictan el peso ($W_i$) de cada fuente para las futuras jornadas:
 $$W_i = \frac{T_i}{\sum_{j=1}^{N} T_j}$$
 
-Posteriormente, la probabilidad consolidada del sistema se calcula sumando el producto de las probabilidades individuales de cada fuente $P_i(R)$ por su peso asignado:
-
+Finalmente, la probabilidad consolidada del sistema se calcula sumando el producto de las probabilidades de cada fuente $P_i(R)$ por su peso asignado:
 $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 
 ## 📂 Estructura del Proyecto

@@ -26,4 +26,4 @@ print("\n--- NUEVO ESTADO DE TUS FUENTES ---")
 for id_f, datos in mis_fuentes_actualizadas.items():
     tasa = motor.obtener_tasa_acierto(datos)
     print(f"{datos['nombre']}:")
-    print(f"{datos['aciertos']} aciertos de {datos['total_predicciones']} totales ({tasa:.2%}%)")
+    print(f"{datos['aciertos']:.2f} puntos de {datos['total_predicciones']} totales ({tasa:.2%})")

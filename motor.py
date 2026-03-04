@@ -106,10 +106,9 @@ def calcular_jornada(jornada, db_fuentes):
     return resultados_jornada
 
 def actualizar_estadisticas(jornada, resultados_reales, db_fuentes):
-    """Suma los aciertos y fallos de cada fuente tras conocerse la realidad."""
+    """Suma puntos basados en la calidad de la probabilidad (Brier Score Invertido)."""
     for partido in jornada:
         id_p = str(partido['id_partido'])
-        
         if id_p not in resultados_reales or resultados_reales[id_p] == "?":
             continue
             
@@ -117,12 +116,25 @@ def actualizar_estadisticas(jornada, resultados_reales, db_fuentes):
         
         for id_fuente, probs_brutas in partido['predicciones'].items():
             db_fuentes[id_fuente]['total_predicciones'] += 1
-
-            # Limpiamos las cuotas para saber cuál era el favorito real
-            probs_limpias = limpiar_prediccion(probs_brutas)
-            prediccion_fuente = max(probs_limpias, key=probs_limpias.get)
             
-            if prediccion_fuente == resultado_real:
-                db_fuentes[id_fuente]['aciertos'] += 1
+            # Limpiamos las cuotas para tener porcentajes puros
+            probs_limpias = limpiar_prediccion(probs_brutas)
+            
+            # --- LÓGICA BRIER SCORE ---
+            brier_sum = 0.0
+            for opcion in ['1', 'X', '2']:
+                # Si la opción es la que ocurrió de verdad, su prob real es 1.0. Si no, 0.0
+                prob_real = 1.0 if opcion == resultado_real else 0.0
+                prob_predicha = probs_limpias.get(opcion, 0.0)
+                
+                # Fórmula de la diferencia al cuadrado
+                brier_sum += (prob_predicha - prob_real) ** 2
+            
+            # El Brier Score clásico va de 0 (perfecto) a 2 (pésimo). 
+            # Lo invertimos para que dé una puntuación de 1 (perfecto) a 0 (pésimo).
+            puntuacion = 1 - (brier_sum / 2)
+            
+            # Acumulamos la puntuación decimal en la variable 'aciertos'
+            db_fuentes[id_fuente]['aciertos'] += puntuacion
                 
     return db_fuentes
