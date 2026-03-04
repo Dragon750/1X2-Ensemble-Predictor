@@ -39,6 +39,58 @@ $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 └── README.md                   # 📄 Documentación del proyecto
 ```
 
+## 📄 Ejemplos de Archivos de Datos
+
+Para que el algoritmo funcione correctamente, los archivos alojados en la carpeta `data/` deben respetar la siguiente estructura JSON:
+
+### 1. Historial de Fuentes (`data/fuentes.json`)
+Este archivo se actualiza automáticamente, pero debes crearlo la primera vez con un historial base para inicializar el sistema.
+
+```json
+{
+    "F1": {"nombre": "Pinnacle","aciertos": 3,"total_predicciones": 10},
+    "F2": {"nombre": "Opta Analyst","aciertos": 3,"total_predicciones": 10}
+}
+```
+
+### 2. Entrada de la Jornada (`data/jornada.json`)
+Soporta tanto cuotas tradicionales (mayores a 1) como probabilidades directas (menores a 1). El sistema las estandariza de forma automática.
+
+```json
+[
+    {
+        "id_partido": 1,
+        "local": "Real Madrid",
+        "visitante": "Barcelona",
+        "predicciones": {
+            "F1": {"1": 2.10, "X": 3.60, "2": 3.40}, 
+            "F2": {"1": 0.45, "X": 0.25, "2": 0.30}  
+        }
+    },
+    {
+        "id_partido": 2,
+        "local": "Getafe",
+        "visitante": "Betis",
+        "predicciones": {
+            "F1": {"1": 0.40, "X": 0.30, "2": 0.30},
+            "F2": {"1": 0.40, "X": 0.30, "2": 0.30}
+        }
+    }
+]
+```
+
+### 3.Resultados Reales (`data/resultados.json`)
+El ID del partido (clave) debe coincidir con los IDs definidos en la jornada. Si un partido se suspende o no se ha jugado, déjalo con una incógnita ? o elimínalo de la lista.
+
+```json
+{
+    "1": "1",
+    "2": "X",
+    "3": "2",
+    "4": "?"
+}
+```
+
 ## 🚀 Flujo de Trabajo (Cómo usarlo)
 
 El sistema está diseñado para un flujo de trabajo minimalista de dos pasos semanales:
