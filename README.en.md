@@ -1,6 +1,6 @@
 # ⚽ Dynamic Ensemble 1X2 Predictive Model
 
-*🇪🇸 Leer en [Español](README.md)*
+*Leer en [Español](README.md)*
 
 This project is a sports forecasting system built in Python that leverages the principle of **Ensemble Learning**. It aggregates odds and probabilities from multiple sources (*sharp* bookmakers and *Big Data* models) to calculate the true probability of a football match outcome (1X2).
 
