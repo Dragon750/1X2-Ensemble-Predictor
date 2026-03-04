@@ -57,8 +57,8 @@ Este archivo se actualiza automáticamente, pero debes crearlo la primera vez co
 
 ```json
 {
-    "F1": {"nombre": "Pinnacle","aciertos": 3,"total_predicciones": 10},
-    "F2": {"nombre": "Opta Analyst","aciertos": 3,"total_predicciones": 10}
+    "F1": {"nombre": "Pinnacle","aciertos": 3.33,"total_predicciones": 10},
+    "F2": {"nombre": "Opta Analyst","aciertos": 3.33,"total_predicciones": 10}
 }
 ```
 
