@@ -1,0 +1,6 @@
+# Ignorar la carpeta de datos y resultados personales
+data/
+
+# Ignorar archivos temporales o cachés de Python
+__pycache__/
+*.pyc
