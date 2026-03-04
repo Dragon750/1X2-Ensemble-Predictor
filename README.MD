@@ -21,12 +21,15 @@ Para cada partido, se calcula la diferencia al cuadrado entre la probabilidad pr
 $$Brier = \sum_{i \in \{1, X, 2\}} (P_i - O_i)^2$$
 
 El sistema invierte esta puntuación para convertirla en "Puntos de Calidad" (de 0 a 1, siendo 1 la perfección):
+
 $$Puntos = 1 - \frac{Brier}{2}$$
 
 Estos puntos acumulados históricamente ($T_i$) dictan el peso ($W_i$) de cada fuente para las futuras jornadas:
+
 $$W_i = \frac{T_i}{\sum_{j=1}^{N} T_j}$$
 
 Finalmente, la probabilidad consolidada del sistema se calcula sumando el producto de las probabilidades de cada fuente $P_i(R)$ por su peso asignado:
+
 $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 
 ## 📂 Estructura del Proyecto
