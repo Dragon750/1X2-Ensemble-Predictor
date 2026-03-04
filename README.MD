@@ -79,7 +79,7 @@ Soporta tanto cuotas tradicionales (mayores a 1) como probabilidades directas (m
 ]
 ```
 
-### 3.Resultados Reales (`data/resultados.json`)
+### 3. Resultados Reales (`data/resultados.json`)
 El ID del partido (clave) debe coincidir con los IDs definidos en la jornada. Si un partido se suspende o no se ha jugado, déjalo con una incógnita ? o elimínalo de la lista.
 
 ```json
@@ -96,7 +96,7 @@ El ID del partido (clave) debe coincidir con los IDs definidos en la jornada. Si
 El sistema está diseñado para un flujo de trabajo minimalista de dos pasos semanales:
 
 1. Preparación y Cálculo:
-    1. Rellena el archivo *data/entrada_viernes.json* con los partidos de la jornada y las cuotas/probabilidades de tus fuentes (ej. Pinnacle, Opta, Forebet).
+    1. Rellena el archivo `data/entrada_viernes.json` con los partidos de la jornada y las cuotas/probabilidades de tus fuentes (ej. Pinnacle, Opta, Forebet).
     2. Ejecuta el calculador:
         ```Bash
         python calcular_probs.py
@@ -104,12 +104,12 @@ El sistema está diseñado para un flujo de trabajo minimalista de dos pasos sem
     3. El programa imprimirá en consola los porcentajes consolidados y precisos para cada posible resultado (1, X, 2).
 
 2. Retroalimentación del Modelo:
-    1. Tras finalizar la jornada, abre *data/resultados_lunes.json* y sustituye las incógnitas por los resultados reales ("1", "X" o "2").
+    1. Tras finalizar la jornada, abre `data/resultados_lunes.json` y sustituye las incógnitas por los resultados reales ("1", "X" o "2").
     2. Ejecuta el actualizador:
         ```Bash
         python actualizar_fuentes.py
         ```
-    3. El sistema evaluará las predicciones hechas el viernes, sumará los aciertos/fallos, actualizará el archivo *mis_fuentes.json* y mostrará el nuevo ranking de fiabilidad de tus fuentes.
+    3. El sistema evaluará las predicciones hechas el viernes, sumará los aciertos/fallos, actualizará el archivo `mis_fuentes.json` y mostrará el nuevo ranking de fiabilidad de tus fuentes.
 
 ## 📌 Fuentes Recomendadas Integradas
 El modelo está configurado inicialmente para balancear el "dinero inteligente" del mercado con simulaciones de datos puros:
