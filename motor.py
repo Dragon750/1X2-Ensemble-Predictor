@@ -2,12 +2,13 @@ import json
 import os
 
 # ==========================================
-# CONFIGURACIÓN DE ARCHIVOS (RUTAS)
+# CONFIGURACIÓN DE ARCHIVOS Y MODELO
 # ==========================================
 CARPETA_DATOS = "data"
 ARCHIVO_DB = os.path.join(CARPETA_DATOS,"fuentes.json")
 ARCHIVO_ENTRADA = os.path.join(CARPETA_DATOS,"jornada.json")
 ARCHIVO_RESULTADOS = os.path.join(CARPETA_DATOS,"resultados.json")
+GAMMA_DECAY = 0.95
 
 # ==========================================
 # 1. GESTIÓN DE ARCHIVOS (LECTURA Y ESCRITURA)
@@ -106,7 +107,15 @@ def calcular_jornada(jornada, db_fuentes):
     return resultados_jornada
 
 def actualizar_estadisticas(jornada, resultados_reales, db_fuentes):
-    """Suma puntos basados en la calidad de la probabilidad (Brier Score Invertido)."""
+    """Suma puntos basados en la calidad de la probabilidad con Time Decay."""
+
+    # --- 1. APLICAR TIME DECAY ---
+    # Usamos la variable global GAMMA_DECAY definida arriba
+    for id_fuente in db_fuentes:
+        db_fuentes[id_fuente]['aciertos'] *= GAMMA_DECAY
+        db_fuentes[id_fuente]['total_predicciones'] *= GAMMA_DECAY
+
+    # --- 2. EVALUAR LA NUEVA JORNADA ---
     for partido in jornada:
         id_p = str(partido['id_partido'])
         if id_p not in resultados_reales or resultados_reales[id_p] == "?":
@@ -117,24 +126,17 @@ def actualizar_estadisticas(jornada, resultados_reales, db_fuentes):
         for id_fuente, probs_brutas in partido['predicciones'].items():
             db_fuentes[id_fuente]['total_predicciones'] += 1
             
-            # Limpiamos las cuotas para tener porcentajes puros
+            # Limpiamos los datos (cuotas a probabilidades)
             probs_limpias = limpiar_prediccion(probs_brutas)
             
-            # --- LÓGICA BRIER SCORE ---
+            # Lógica Brier Score
             brier_sum = 0.0
             for opcion in ['1', 'X', '2']:
-                # Si la opción es la que ocurrió de verdad, su prob real es 1.0. Si no, 0.0
                 prob_real = 1.0 if opcion == resultado_real else 0.0
                 prob_predicha = probs_limpias.get(opcion, 0.0)
-                
-                # Fórmula de la diferencia al cuadrado
                 brier_sum += (prob_predicha - prob_real) ** 2
             
-            # El Brier Score clásico va de 0 (perfecto) a 2 (pésimo). 
-            # Lo invertimos para que dé una puntuación de 1 (perfecto) a 0 (pésimo).
             puntuacion = 1 - (brier_sum / 2)
-            
-            # Acumulamos la puntuación decimal en la variable 'aciertos'
             db_fuentes[id_fuente]['aciertos'] += puntuacion
                 
     return db_fuentes
