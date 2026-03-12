@@ -45,7 +45,7 @@ El programa utiliza una media ponderada normalizada donde los pesos se recalcula
 ```text
 1X2-predictor/
 │
-├── data/                   # 📁 Datos JSON (Ignorados en control de versiones)
+├── data/                   # 📁 Datos (Ignorados en control de versiones)
 │   ├── database.db         # Base de datos SQLite (Historial de partidos y fuentes)
 │   ├── jornada.json        # Cuotas y probabilidades de la jornada actual
 │   └── resultados.json     # Resultados reales para retroalimentar el modelo

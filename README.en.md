@@ -45,8 +45,8 @@ The system uses a normalized weighted average where weights are recalculated aft
 ```text
 1X2-predictor/
 │
-├── data/                   # 📁 JSON Data (Ignored in version control)
-│   ├── fuentes.json        # Historical database of hits/misses (points)
+├── data/                   # 📁 Data (Ignored in version control)
+│   ├── database.db         # SQLite database (History of matches and sources)
 │   ├── jornada.json        # Current matchday odds and probabilities
 │   └── resultados.json     # Real outcomes to feed back the model
 │
