@@ -14,25 +14,23 @@ The system evaluates the weekly performance of each source and dynamically adjus
 * **Scalable Architecture:** The code is completely separated from the data (JSON-based architecture), allowing you to add infinite sources or matches without touching a single line of logic.
 * **Missing Data Handling:** If a source fails to publish data for a specific week, the system recalculates weights proportionally using only the available sources.
 
+* **Time Decay**: Implements a **configurable** decay factor ($\gamma$). This allows recent results to carry more weight than older ones, ensuring the model adapts quickly to changes in source performance or current trends.
+
 ## 🧮 The Mathematical Model
 
-The program uses a normalized weighted average, but the weights are calculated by evaluating the historical quality of predicted probabilities using the **Brier Score**.
+The system uses a normalized weighted average where weights are recalculated after each matchday by evaluating historical accuracy using the **Brier Score** and a **Time Decay** factor.
 
-For each match, the squared difference between the predicted probability $P_i$ and the actual outcome $O_i$ is calculated (where $O_i = 1$ if the event occurs and $0$ if it doesn't):
+1. **Match Scoring:** For each match, prediction quality (from 0 to 1) is calculated using the inverted Brier Score:
+   $$Points = 1 - \frac{\sum_{i \in \{1, X, 2\}} (P_i - O_i)^2}{2}$$
 
-$$Brier = \sum_{i \in \{1, X, 2\}} (P_i - O_i)^2$$
+2. **Historical Update (Time Decay):** Before adding new points, the accumulated history ($T_i$) is multiplied by the decay factor ($\gamma$) defined in `GAMMA_DECAY`:
+   $$T_i(t) = T_i(t-1) \cdot \gamma + \sum Points_{current\_matchday}$$
 
-The system inverts this score to convert it into "Quality Points" (from 0 to 1, with 1 being absolute perfection):
+3. **Weight Calculation:** The weight ($W_i$) of each source is determined by its proportion of points relative to the total ecosystem:
+   $$W_i = \frac{T_i}{\sum_{j=1}^{N} T_j}$$
 
-$$Puntos = 1 - \frac{Brier}{2}$$
-
-These historically accumulated points ($T_i$) dictate the weight ($W_i$) of each source for future matchdays:
-
-$$W_i = \frac{T_i}{\sum_{j=1}^{N} T_j}$$
-
-Finally, the system's consolidated probability is calculated by summing the product of each source's individual probabilities $P_i(R)$ by its assigned weight:
-
-$$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
+4. **Consolidated Probability:** The final prediction is the weighted sum of all individual sources:
+   $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 
 ## 📂 Project Structure
 
@@ -47,9 +45,19 @@ $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 ├── motor.py                    # ⚙️ Core: Math logic and JSON parsing
 ├── calcular_probs.py           # ▶️ Pre-match execution script
 ├── actualizar_fuentes.py       # ▶️ Post-match execution script
-└── README.md                   # 📄 Project documentation (Spanish)
+├── README.md                   # 📄 Project documentation (Spanish)
 └── README.en.md                # 📄 Project documentation (English)
 ```
+
+### ⚙️ Model Configuration
+
+In the header of motor.py, you can adjust the GAMMA_DECAY variable:
+
+* 1.0: The model retains all historical data equally (no decay).
+
+* 0.95: Recommended. A balance between long-term history and current form.
+
+* 0.80: The model forgets the past quickly and highly prioritizes the last 2-3 weeks.
 
 ## 📄 Data Files Examples
 

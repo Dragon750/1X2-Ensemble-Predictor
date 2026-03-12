@@ -13,26 +13,23 @@ El sistema evalúa el rendimiento semanal de cada fuente y ajusta dinámicamente
 * **Actualización Dinámica de Pesos:** Las fuentes compiten entre sí. Tras cada jornada, el programa evalúa la puntuación Brier de cada fuente y recalcula su peso para la próxima predicción.
 * **Arquitectura Escalable:** El código está completamente separado de los datos (arquitectura basada en JSON), permitiendo añadir infinitas fuentes o partidos sin tocar una sola línea de lógica.
 * **Manejo de Datos Faltantes:** Si una fuente no publica datos una semana, el sistema recalcula los pesos proporcionalmente solo con las fuentes disponibles.
+* **Decaimiento Temporal (Time Decay)**: Implementa un factor de "olvido" ($\gamma$) **configurable**. Esto permite que los aciertos recientes tengan más peso que los antiguos, haciendo que el modelo se adapte rápidamente a los cambios de rendimiento o rachas de las fuentes.
 
 ## 🧮 El Modelo Matemático
 
-El programa utiliza una media ponderada normalizada, pero los pesos se calculan evaluando la calidad histórica de las probabilidades predichas mediante el **Brier Score**.
+El programa utiliza una media ponderada normalizada donde los pesos se recalculan tras cada jornada evaluando la precisión histórica mediante el **Brier Score** y un factor de **Decaimiento Temporal**.
 
-Para cada partido, se calcula la diferencia al cuadrado entre la probabilidad predicha $P_i$ y el resultado real $O_i$ (donde $O_i = 1$ si el evento ocurre y $0$ si no):
+1. **Puntuación por partido:** Para cada partido, se calcula la calidad de la predicción (de 0 a 1) usando el Brier Score invertido:
+   $$Puntos = 1 - \frac{\sum_{i \in \{1, X, 2\}} (P_i - O_i)^2}{2}$$
 
-$$Brier = \sum_{i \in \{1, X, 2\}} (P_i - O_i)^2$$
+2. **Actualización del Historial (Time Decay):** Antes de sumar los nuevos aciertos, el historial acumulado ($T_i$) se multiplica por el factor de decaimiento ($\gamma$) definido en `GAMMA_DECAY`:
+   $$T_i(t) = T_i(t-1) \cdot \gamma + \sum Puntos_{jornada\_actual}$$
 
-El sistema invierte esta puntuación para convertirla en "Puntos de Calidad" (de 0 a 1, siendo 1 la perfección):
+3. **Cálculo de Pesos:** El peso ($W_i$) de cada fuente se determina por su proporción de puntos sobre el total del ecosistema:
+   $$W_i = \frac{T_i}{\sum_{j=1}^{N} T_j}$$
 
-$$Puntos = 1 - \frac{Brier}{2}$$
-
-Estos puntos acumulados históricamente ($T_i$) dictan el peso ($W_i$) de cada fuente para las futuras jornadas:
-
-$$W_i = \frac{T_i}{\sum_{j=1}^{N} T_j}$$
-
-Finalmente, la probabilidad consolidada del sistema se calcula sumando el producto de las probabilidades de cada fuente $P_i(R)$ por su peso asignado:
-
-$$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
+4. **Probabilidad Consolidada:** La predicción final es la suma ponderada de todas las fuentes:
+   $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 
 ## 📂 Estructura del Proyecto
 
@@ -47,8 +44,19 @@ $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 ├── motor.py                    # ⚙️ Core: Lógica matemática y parseo de JSON
 ├── calcular_probs.py           # ▶️ Script de ejecución pre-partido
 ├── actualizar_fuentes.py       # ▶️ Script de ejecución post-partido
-└── README.md                   # 📄 Documentación del proyecto
+├── README.md                   # 📄 Documentación del proyecto (Español)
+└── README.en.md                # 📄 Documentación del proyecto (Inglés)
 ```
+
+### ⚙️ Configuración del Modelo
+
+En la cabecera de motor.py puedes ajustar la variable GAMMA_DECAY:
+
+* `1.0`: El modelo recuerda todo el historial por igual (sin decaimiento).
+
+* `0.95`: Recomendado. Equilibrio entre historial y forma actual.
+
+* `0.80`: El modelo olvida rápido el pasado y prioriza mucho las últimas 2-3 semanas.
 
 ## 📄 Ejemplos de Archivos de Datos
 
