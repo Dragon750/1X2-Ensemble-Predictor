@@ -21,7 +21,10 @@ mis_fuentes_actualizadas = motor.actualizar_estadisticas(jornada_pasada, resulta
 # 3. Guardar el nuevo historial
 motor.guardar_db(mis_fuentes_actualizadas)
 
-# 4. Mostrar cómo queda el ranking de tus fuentes
+# 4. Guardar el historial de partidos y cuotas en las nuevas tablas
+motor.guardar_historial_jornada(jornada_pasada, resultados_fin_de_semana)
+
+# 5. Mostrar cómo queda el ranking de tus fuentes
 print("\n--- NUEVO ESTADO DE TUS FUENTES ---")
 for id_f, datos in mis_fuentes_actualizadas.items():
     tasa = motor.obtener_tasa_acierto(datos)

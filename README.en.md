@@ -4,14 +4,22 @@
 
 This project is a sports forecasting system built in Python that leverages the principle of **Ensemble Learning**. It aggregates odds and probabilities from multiple sources (*sharp* bookmakers and *Big Data* models) to calculate the true probability of a football match outcome (1X2).
 
-The system evaluates the weekly performance of each source and dynamically adjusts its "weight" in the model, granting greater mathematical relevance to sources with a better historical hit rate.
+The system evaluates the weekly performance of each source and dynamically adjusts its "weight" in the model, keeping an immutable historical record in a SQLite database to grant greater mathematical relevance to sources with a better historical hit rate.
 
 ## ✨ Key Features
 
 * **Automatic Overround Removal:** The algorithm detects whether the input is a pure probability (e.g., `0.45`) or betting odds (e.g., `2.10`). If it's an odd, it calculates the implied probability and automatically removes the bookmaker's margin (overround) to work with pure probabilities summing to 1.
+
 * **Probabilistic Evaluation (Brier Score):** The system doesn't evaluate predictions as a simple "hit or miss". It uses the inverted *Brier Score* to heavily penalize sources that fail predictions they were highly confident about, and rewards those that are precise and well-calibrated.
+
+* **Relational Database (SQLite):** Keeps a full, immutable history of all matches, exact odds, and real outcomes, enabling advanced analytics and SQL querying in the future.
+
+* **Hybrid Architecture (JSON + DB):** Uses JSON files as temporary input buffers for human-friendly data entry, while the core engine safely handles data persistence in SQLite.
+
 * **Dynamic Weight Updating:** Sources compete against each other. After each matchday, the program evaluates the Brier score of each source and recalculates its weight for the next prediction.
-* **Scalable Architecture:** The code is completely separated from the data (JSON-based architecture), allowing you to add infinite sources or matches without touching a single line of logic.
+
+* **Scalable Architecture:** The code is completely separated from the data, allowing you to add infinite sources or matches without touching a single line of logic.
+
 * **Missing Data Handling:** If a source fails to publish data for a specific week, the system recalculates weights proportionally using only the available sources.
 
 * **Time Decay**: Implements a **configurable** decay factor ($\gamma$). This allows recent results to carry more weight than older ones, ensuring the model adapts quickly to changes in source performance or current trends.
@@ -63,17 +71,7 @@ In the header of motor.py, you can adjust the GAMMA_DECAY variable:
 
 For the algorithm to work correctly, the files hosted in the `data/` folder must respect the following JSON structure:
 
-### 1. Sources History (`data/fuentes.json`)
-This file updates automatically, but you must create it the first time with a base history to initialize the system.
-
-```json
-{
-    "F1": {"nombre": "Pinnacle","aciertos": 3.33,"total_predicciones": 10},
-    "F2": {"nombre": "Opta Analyst","aciertos": 3.33,"total_predicciones": 10}
-}
-```
-
-### 2. Matchday Input (`data/jornada.json`)
+### 1. Matchday Input (`data/jornada.json`)
 It supports both traditional odds (greater than 1) and direct probabilities (less than 1). The system standardizes them automatically.
 
 ```json
@@ -99,7 +97,7 @@ It supports both traditional odds (greater than 1) and direct probabilities (les
 ]
 ```
 
-### 3. Real Outcomes (`data/resultados.json`)
+### 2. Real Outcomes (`data/resultados.json`)
 The match ID (key) must match the IDs defined in the matchday input. If a match is suspended or hasn't been played yet, leave it with a question mark ? or remove it from the list.
 
 ```json
@@ -133,11 +131,15 @@ The system is designed for a minimalist two-step weekly workflow:
         ```Bash
         python calcular_probs.py
         ```
-    3. The system will evaluate the predictions made on Friday, sum the hits/misses, update the `fuentes.json` file, and show the new reliability ranking of your sources.
+    3. The system will evaluate the predictions made on Friday, sum the hits/misses, update the `database.db` database, and show the new reliability ranking of your sources.
 
 ## 📌 Fuentes Recomendadas Integradas
 The model is initially configured to balance the market's "smart money" with pure data simulations:
+
 * **Sharp Bookmakers:** Pinnacle, Betfair Exchange.
+
 * **Market Aggregators:** OddsPortal.
+
 * **Predictive Models (Data Science):** Opta Analyst, Forebet, FootyStats.
+
 * **Wisdom of the Crowds:** BeSoccer.

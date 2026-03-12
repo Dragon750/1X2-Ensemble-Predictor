@@ -4,15 +4,24 @@
 
 Este proyecto es un sistema de pronósticos deportivos basado en Python que utiliza el principio de **Ensemble Learning** (Aprendizaje por Conjuntos). Consolida las cuotas y probabilidades de múltiples fuentes (casas de apuestas *sharp* y modelos de *Big Data*) para calcular la probabilidad real de un partido (1X2). 
 
-El sistema evalúa el rendimiento semanal de cada fuente y ajusta dinámicamente su "peso" en el modelo, otorgando mayor relevancia matemática a las fuentes con mejor tasa de aciertos histórica.
+El sistema evalúa el rendimiento semanal de cada fuente y ajusta dinámicamente su "peso" en el modelo, guardando un registro histórico inmutable en una base de datos SQLite para otorgar mayor relevancia matemática a las fuentes con mejor tasa de aciertos histórica.
 
 ## ✨ Características Principales
 
 * **Limpieza de Overround Automática:** El algoritmo detecta si la entrada es una probabilidad (ej. `0.45`) o una cuota de apuestas (ej. `2.10`). Si es una cuota, calcula la probabilidad implícita y elimina automáticamente la comisión (margen) de la casa para trabajar con probabilidades puras sobre 1.
+
 * **Evaluación Probabilística (Brier Score):** El sistema no evalúa las predicciones como un simple "acierto o fallo". Utiliza el *Brier Score* invertido para castigar severamente a las fuentes que fallan predicciones en las que tenían mucha confianza, y premiar a aquellas que son precisas y calibradas.
-* **Actualización Dinámica de Pesos:** Las fuentes compiten entre sí. Tras cada jornada, el programa evalúa la puntuación Brier de cada fuente y recalcula su peso para la próxima predicción.
-* **Arquitectura Escalable:** El código está completamente separado de los datos (arquitectura basada en JSON), permitiendo añadir infinitas fuentes o partidos sin tocar una sola línea de lógica.
+
+* **Base de Datos Relacional (SQLite):** Guarda un historial completo e inmutable de todos los partidos, probabilidades exactas y resultados reales, permitiendo análisis avanzados y consultas SQL en el futuro.
+
+* **Arquitectura Híbrida (JSON + DB):** Utiliza archivos JSON como búferes temporales de entrada para facilitar el uso humano, mientras el motor central gestiona la persistencia de datos de forma segura en SQLite.
+
+* **Actualización Dinámica de Pesos:** Tras cada jornada, el programa evalúa a cada fuente y recalcula su peso para la próxima predicción.
+
+* **Arquitectura Escalable:** El código está completamente separado de los datos, permitiendo añadir infinitas fuentes o partidos sin tocar una sola línea de lógica.
+
 * **Manejo de Datos Faltantes:** Si una fuente no publica datos una semana, el sistema recalcula los pesos proporcionalmente solo con las fuentes disponibles.
+
 * **Decaimiento Temporal (Time Decay)**: Implementa un factor de "olvido" ($\gamma$) **configurable**. Esto permite que los aciertos recientes tengan más peso que los antiguos, haciendo que el modelo se adapte rápidamente a los cambios de rendimiento o rachas de las fuentes.
 
 ## 🧮 El Modelo Matemático
@@ -37,7 +46,7 @@ El programa utiliza una media ponderada normalizada donde los pesos se recalcula
 1X2-predictor/
 │
 ├── data/                   # 📁 Datos JSON (Ignorados en control de versiones)
-│   ├── fuentes.json        # Base de datos histórica de aciertos/fallos
+│   ├── database.db         # Base de datos SQLite (Historial de partidos y fuentes)
 │   ├── jornada.json        # Cuotas y probabilidades de la jornada actual
 │   └── resultados.json     # Resultados reales para retroalimentar el modelo
 │
@@ -62,17 +71,7 @@ En la cabecera de motor.py puedes ajustar la variable GAMMA_DECAY:
 
 Para que el algoritmo funcione correctamente, los archivos alojados en la carpeta `data/` deben respetar la siguiente estructura JSON:
 
-### 1. Historial de Fuentes (`data/fuentes.json`)
-Este archivo se actualiza automáticamente, pero debes crearlo la primera vez con un historial base para inicializar el sistema.
-
-```json
-{
-    "F1": {"nombre": "Pinnacle","aciertos": 3.33,"total_predicciones": 10},
-    "F2": {"nombre": "Opta Analyst","aciertos": 3.33,"total_predicciones": 10}
-}
-```
-
-### 2. Entrada de la Jornada (`data/jornada.json`)
+### 1. Entrada de la Jornada (`data/jornada.json`)
 Soporta tanto cuotas tradicionales (mayores a 1) como probabilidades directas (menores a 1). El sistema las estandariza de forma automática.
 
 ```json
@@ -98,7 +97,7 @@ Soporta tanto cuotas tradicionales (mayores a 1) como probabilidades directas (m
 ]
 ```
 
-### 3. Resultados Reales (`data/resultados.json`)
+### 2. Resultados Reales (`data/resultados.json`)
 El ID del partido (clave) debe coincidir con los IDs definidos en la jornada. Si un partido se suspende o no se ha jugado, déjalo con una incógnita ? o elimínalo de la lista.
 
 ```json
@@ -128,11 +127,14 @@ El sistema está diseñado para un flujo de trabajo minimalista de dos pasos sem
         ```Bash
         python actualizar_fuentes.py
         ```
-    3. El sistema evaluará las predicciones hechas el viernes, sumará los aciertos/fallos, actualizará el archivo `fuentes.json` y mostrará el nuevo ranking de fiabilidad de tus fuentes.
+    3. El sistema evaluará las predicciones hechas el viernes, sumará los aciertos/fallos, actualizará la base de datos `database.db` y mostrará el nuevo ranking de fiabilidad de tus fuentes.
 
 ## 📌 Fuentes Recomendadas Integradas
 El modelo está configurado inicialmente para balancear el "dinero inteligente" del mercado con simulaciones de datos puros:
 * **Sharp Bookmakers:** Pinnacle, Betfair Exchange.
+
 * **Agregadores de Mercado:** OddsPortal.
+
 * **Modelos Predictivos (Data Science):** Opta Analyst, Forebet, FootyStats.
+
 * **Sabiduría de Masas:** BeSoccer.
