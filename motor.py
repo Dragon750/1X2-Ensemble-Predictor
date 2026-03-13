@@ -7,7 +7,6 @@ import datetime
 # CONFIGURACIÓN DE ARCHIVOS Y MODELO
 # ==========================================
 CARPETA_DATOS = "data"
-ARCHIVO_DB = os.path.join(CARPETA_DATOS,"fuentes.json")
 ARCHIVO_SQLITE = os.path.join(CARPETA_DATOS, "database.db")
 ARCHIVO_ENTRADA = os.path.join(CARPETA_DATOS,"jornada.json")
 ARCHIVO_RESULTADOS = os.path.join(CARPETA_DATOS,"resultados.json")
@@ -16,7 +15,7 @@ GAMMA_DECAY = 0.95
 # ==========================================
 # 1. GESTIÓN DE ARCHIVOS (LECTURA Y ESCRITURA)
 # ==========================================
-def cargar_db(ruta_db=ARCHIVO_DB):
+def cargar_db(ruta_db=ARCHIVO_SQLITE):
     """Carga las fuentes desde SQLite y devuelve un diccionario para compatibilidad."""
     if not os.path.exists(ruta_db):
         print("Error: Base de datos SQLite no encontrada.")
@@ -42,7 +41,7 @@ def cargar_db(ruta_db=ARCHIVO_DB):
         
     return db_fuentes
 
-def guardar_db(db_fuentes, ruta_db=ARCHIVO_DB):
+def guardar_db(db_fuentes, ruta_db=ARCHIVO_SQLITE):
     """Guarda el diccionario actualizado devuelta en SQLite."""
     conexion = sqlite3.connect(ruta_db)
     cursor = conexion.cursor()
@@ -54,38 +53,6 @@ def guardar_db(db_fuentes, ruta_db=ARCHIVO_DB):
             VALUES (?, ?, ?, ?)
         ''', (id_f, datos['nombre'], datos['aciertos'], datos['total_predicciones']))
 
-    conexion.commit()
-    conexion.close()
-
-def inicializar_tablas_historial(ruta_db=ARCHIVO_SQLITE):
-    """Crea las tablas relacionales para guardar el historial de partidos y cuotas."""
-    conexion = sqlite3.connect(ruta_db)
-    cursor = conexion.cursor()
-    
-    # 1. Tabla de Partidos
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS partidos (
-            id_partido TEXT PRIMARY KEY,
-            local TEXT,
-            visitante TEXT,
-            resultado_real TEXT
-        )
-    ''')
-    
-    # 2. Tabla de Predicciones (Relaciona Partido -> Fuente -> Probabilidades)
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS predicciones (
-            id_partido TEXT,
-            id_fuente TEXT,
-            prob_1 REAL,
-            prob_X REAL,
-            prob_2 REAL,
-            PRIMARY KEY (id_partido, id_fuente),
-            FOREIGN KEY (id_partido) REFERENCES partidos(id_partido),
-            FOREIGN KEY (id_fuente) REFERENCES fuentes(id_fuente)
-        )
-    ''')
-    
     conexion.commit()
     conexion.close()
 
