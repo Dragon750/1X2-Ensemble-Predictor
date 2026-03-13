@@ -55,6 +55,7 @@ $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 │   └── resultados.json     # Resultados reales para retroalimentar el modelo
 │
 ├── motor.py                    # ⚙️ Core: Lógica matemática y parseo de JSON
+├── set_up_db.py                # 🛠️ Script para crear/inicializar la base de datos
 ├── calcular_probs.py           # ▶️ Script de ejecución pre-partido
 ├── actualizar_fuentes.py       # ▶️ Script de ejecución post-partido
 ├── README.md                   # 📄 Documentación del proyecto (Español)
@@ -76,6 +77,7 @@ En la cabecera de motor.py puedes ajustar la variable GAMMA_DECAY:
 Para que el algoritmo funcione correctamente, los archivos alojados en la carpeta `data/` deben respetar la siguiente estructura JSON:
 
 ### 1. Entrada de la Jornada (`data/jornada.json`)
+
 Soporta tanto cuotas tradicionales (mayores a 1) como probabilidades directas (menores a 1). El sistema las estandariza de forma automática.
 
 ```json
@@ -102,6 +104,7 @@ Soporta tanto cuotas tradicionales (mayores a 1) como probabilidades directas (m
 ```
 
 ### 2. Resultados Reales (`data/resultados.json`)
+
 El ID del partido (clave) debe coincidir con los IDs definidos en la jornada. Si un partido se suspende o no se ha jugado, déjalo con una incógnita ? o elimínalo de la lista.
 
 ```json
@@ -117,24 +120,41 @@ El ID del partido (clave) debe coincidir con los IDs definidos en la jornada. Si
 
 El sistema está diseñado para un flujo de trabajo minimalista de dos pasos semanales:
 
-1. Preparación y Cálculo:
+0. Inicialización (Solo la primera vez)
+Antes de empezar a usar el programa, debes generar la estructura de la base de datos:
+
+    1. Ejecuta el script de configuración:
+        ```Bash
+        python set_up_db.py
+        ```
+        Esto creará automáticamente el archivo database.db y las tablas necesarias en la carpeta data/ sin afectar a la lógica central.
+
+1. Preparación y Cálculo (Antes de la jornada):
+
     1. Rellena el archivo `data/jornada.json` con los partidos de la jornada y las cuotas/probabilidades de tus fuentes (ej. Pinnacle, Opta, Forebet).
+
     2. Ejecuta el calculador:
         ```Bash
         python calcular_probs.py
         ```
+
     3. El programa imprimirá en consola los porcentajes consolidados y precisos para cada posible resultado (1, X, 2).
 
 2. Retroalimentación del Modelo:
+
     1. Tras finalizar la jornada, abre `data/resultados.json` y sustituye las incógnitas por los resultados reales ("1", "X" o "2").
+
     2. Ejecuta el actualizador:
         ```Bash
         python actualizar_fuentes.py
         ```
+
     3. El sistema evaluará las predicciones hechas el viernes, sumará los aciertos/fallos, actualizará la base de datos `database.db` y mostrará el nuevo ranking de fiabilidad de tus fuentes.
 
 ## 📌 Fuentes Recomendadas Integradas
+
 El modelo está configurado inicialmente para balancear el "dinero inteligente" del mercado con simulaciones de datos puros:
+
 * **Sharp Bookmakers:** Pinnacle, Betfair Exchange.
 
 * **Agregadores de Mercado:** OddsPortal.
