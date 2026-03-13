@@ -16,9 +16,11 @@ El sistema evalúa el rendimiento semanal de cada fuente y ajusta dinámicamente
 
 * **Asignación Justa en Memoria (1/3):** Si una fuente es nueva en una liga, el motor le asigna temporalmente una probabilidad natural de acierto del 33.33% (1/3) para realizar el cálculo de pesos, sin contaminar la base de datos con perfiles vacíos.
 
-* **Base de Datos Relacional (SQLite):** Guarda un historial completo e inmutable de todos los partidos, probabilidades exactas y resultados reales.
+* **Validación Estricta de Ligas:** El sistema bloquea cálculos y actualizaciones erróneas si detecta que falta la asignación de liga en algún partido del archivo de entrada.
 
-* **Sistema de Backup:** Incluye una herramienta para extraer todo el historial de la base de datos y guardarlo en un JSON de seguridad.
+* **Privacidad de Fuentes:** Utiliza un archivo JSON local (ignorado en repositorios) para traducir los IDs de las fuentes a sus nombres reales, protegiendo tu estrategia.
+
+* **Base de Datos Relacional y Backup Completo:** Guarda un historial en SQLite y cuenta con scripts dedicados para exportar e importar la totalidad de la base de datos (fuentes, partidos y predicciones).
 
 * **Manejo de Datos Faltantes:** Si una fuente no publica datos una semana, el sistema recalcula los pesos proporcionalmente solo con las fuentes disponibles.
 
@@ -51,17 +53,32 @@ $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 │
 ├── data/                       # 📁 Datos (Ignorados en control de versiones)
 │   ├── database.db             # Base de datos SQLite (Historial de partidos y fuentes)
-│   ├── fuentes_backup.json     # Copia de seguridad del historial de fuentes
+│   ├── backup_total.json       # Copia de seguridad completa
+│   ├── nombres_fuentes.json    # Diccionario privado de fuentes
 │   ├── jornada.json            # Cuotas y probabilidades de la jornada actual
 │   └── resultados.json         # Resultados reales para retroalimentar el modelo
 │
 ├── motor.py                    # ⚙️ Core: Lógica matemática y parseo 
 ├── set_up_db.py                # 🛠️ Script para crear la base de datos
-├── backup_fuentes.py           # 💾 Script para exportar la base de datos a JSON
+├── backup_completo.py          # 💾 Script para exportar la base de datos a JSON
+├── restaurar_completo.py       # 🔄 Script para reconstruir la base de datos desde el JSON
 ├── calcular_probs.py           # ▶️ Script de ejecución pre-partido
 ├── actualizar_fuentes.py       # ▶️ Script de ejecución post-partido
 ├── README.md                   # 📄 Documentación del proyecto (Español)
 └── README.en.md                # 📄 Documentación del proyecto (Inglés)
+```
+
+## ⚙️ Configuración del Modelo
+
+En la cabecera de `motor.py` puedes ajustar el decaimiento temporal (GAMMA_DECAY).
+
+**Nombres de fuentes privados**: Para mantener tus fuentes en secreto, crea un archivo local llamado `data/nombres_fuentes.json`. Traducirá los IDs cortos a nombres legibles en la consola y la base de datos:
+
+```json
+{
+    "F1": "Pinnacle",
+    "F2": "Opta Analyst"
+}
 ```
 
 ## 📄 Ejemplos de Archivos de Datos
@@ -99,7 +116,7 @@ Soporta tanto cuotas tradicionales (mayores a 1) como probabilidades directas (m
 
 ### 2. Resultados Reales (`data/resultados.json`)
 
-El ID del partido (clave) debe coincidir con los IDs definidos en la jornada. Si un partido se suspende o no se ha jugado, déjalo con una incógnita `?` o elimínalo de la lista.
+El ID del partido (clave) debe coincidir con los IDs definidos en la jornada. Las claves deben ser de texto (entre comillas). Si un partido se suspende o no se ha jugado, déjalo con una incógnita `?` o elimínalo de la lista.
 
 ```json
 {
@@ -118,7 +135,7 @@ El sistema está diseñado para un flujo de trabajo minimalista de dos pasos sem
 
     * **Primera vez**: Ejecuta `python set_up_db.py` para crear el archivo `database.db`.
 
-    * **Copias de seguridad**: Ejecuta `python backup_fuentes.py` cuando desees respaldar tu progreso en `fuentes_backup.json`.
+    * **Copias de seguridad**: Ejecuta `python backup_completo.py` cuando desees respaldar tu progreso en `fuentes_backup.json`. Si hay algún fallo, usa `python restaurar_completo.py` para restaurar tu base de datos.
 
 1. Preparación y Cálculo (Antes de la jornada):
 
@@ -128,9 +145,9 @@ El sistema está diseñado para un flujo de trabajo minimalista de dos pasos sem
 
 2. Retroalimentación del Modelo:
 
-    1. Tras finalizar la jornada, abre `data/resultados.json` y sustituye las incógnitas por los resultados reales `("1", "X" o "2")`.
+    * Tras finalizar la jornada, abre `data/resultados.json` y sustituye las incógnitas por los resultados reales `("1", "X" o "2")`.
 
-    2. Ejecuta el actualizador `python actualizar_fuentes.py`, y el sistema mostrará el nuevo ranking de fiabilidad por liga.
+    * Ejecuta el actualizador `python actualizar_fuentes.py`, y el sistema mostrará el nuevo ranking de fiabilidad por liga.
 
 ## 📌 Fuentes Recomendadas Integradas
 
@@ -140,6 +157,6 @@ El modelo está configurado inicialmente para balancear el "dinero inteligente" 
 
 * **Agregadores de Mercado:** OddsPortal.
 
-* **Modelos Predictivos (Data Science):** Opta Analyst, Forebet, FootyStats.
+* **Modelos Predictivos (Data Science):** Opta Analyst.
 
 * **Sabiduría de Masas:** BeSoccer.

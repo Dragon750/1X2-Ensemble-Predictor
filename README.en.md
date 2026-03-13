@@ -16,9 +16,11 @@ The system evaluates the weekly performance of each source and dynamically adjus
 
 * **Fair In-Memory Initialization (1/3):** If a source is new to a specific league, the engine temporarily assigns it a natural 33.33% (1/3) hit probability for weight distribution, keeping the database clean of empty profiles.
 
-* **Relational Database (SQLite):** Keeps a full, immutable history of all matches, exact odds, and real outcomes.
+* **Strict League Validation:** Execution halts to prevent database corruption if any match is missing the required league tag.
 
-* **Backup System:** Includes a quick script to extract all historical data and save it securely into a JSON file.
+* **Private Source Mapping:** Keeps your strategic sources private via a local, git-ignored JSON mapping file.
+
+* **Full Database Backup & Restore:** Dedicated scripts to dump and restore the entire SQLite history (sources, matches, predictions).
 
 * **Missing Data Handling:** If a source fails to publish data for a specific week, the system recalculates weights proportionally using only the available sources.
 
@@ -51,17 +53,32 @@ $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 │
 ├── data/                       # 📁 Data (Ignored in version control)
 │   ├── database.db             # SQLite database (History of matches and sources)
-│   ├── fuentes_backup.json     # Backup of historical source data
+│   ├── backup_total.json       # Full backup file
+│   ├── nombres_fuentes.json    # Private mapping dictionary
 │   ├── jornada.json            # Current matchday odds and probabilities
 │   └── resultados.json         # Real outcomes to feed back the model
 │
 ├── motor.py                    # ⚙️ Core logic and JSON parsing
 ├── set_up_db.py                # 🛠️ Database initialization script
-├── backup_fuentes.py           # 💾 JSON backup generator script
+├── backup_completo.py          # 💾 Full backup generator
+├── restaurar_completo.py       # 🔄 Full database restorer
 ├── calcular_probs.py           # ▶️ Pre-match execution script
 ├── actualizar_fuentes.py       # ▶️ Post-match execution script
 ├── README.md                   # 📄 Project documentation (Spanish)
 └── README.en.md                # 📄 Project documentation (English)
+```
+
+## ⚙️ Model Configuration
+
+In the header of `motor.py`, you can adjust the time decay factor (GAMMA_DECAY).
+
+**Private Source Names**: To keep your sources secret, create a local file named `data/nombres_fuentes.json` to translate short IDs into readable names:
+
+```json
+{
+    "F1": "Bookmaker A",
+    "F2": "Math Model B"
+}
 ```
 
 ## 📄 Data Files Examples
@@ -89,7 +106,7 @@ It supports both traditional odds (greater than 1) and direct probabilities (les
 
 ### 2. Real Outcomes (`data/resultados.json`)
 
-The match ID (key) must match the IDs defined in the matchday input. If a match is suspended or hasn't been played yet, leave it with a question mark `?` or remove it from the list.
+The match ID (key) must match the IDs defined in the matchday input. Keys must be text format (with quotes). If a match is suspended or hasn't been played yet, leave it with a question mark `?` or remove it from the list.
 
 ```json
 {
@@ -107,7 +124,7 @@ The system is designed for a minimalist two-step weekly workflow:
 0. Setup and Maintenance:
     * **First Run**: Execute `python set_up_db.py` to generate the `database.db` file.
 
-    * **Backups**: Run `python backup_fuentes.py` anytime you want to save a secure JSON copy of your sources' histories.
+    * **Backups**: Run `python backup_fuentes.py` anytime you want to save a secure JSON copy of your sources' histories. To recover data, run python `restaurar_completo.py`.
 
 1. Preparation and Calculation:
 
@@ -119,7 +136,7 @@ The system is designed for a minimalist two-step weekly workflow:
 
     * After the matchday ends, open `data/resultados.json` and replace the question marks with the real outcomes `("1", "X", or "2")`.
 
-    2. Run the updater `python calcular_probs.py`, and the system will recalculate metrics and see the updated league rankings.
+    * Run the updater `python calcular_probs.py`, and the system will recalculate metrics and see the updated league rankings.
 
 ## 📌 Fuentes Recomendadas Integradas
 The model is initially configured to balance the market's "smart money" with pure data simulations:
@@ -128,6 +145,6 @@ The model is initially configured to balance the market's "smart money" with pur
 
 * **Market Aggregators:** OddsPortal.
 
-* **Predictive Models (Data Science):** Opta Analyst, Forebet, FootyStats.
+* **Predictive Models (Data Science):** Opta Analyst.
 
 * **Wisdom of the Crowds:** BeSoccer.
