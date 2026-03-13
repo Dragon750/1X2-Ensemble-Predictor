@@ -7,10 +7,23 @@ import datetime
 # CONFIGURACIÓN DE ARCHIVOS Y MODELO
 # ==========================================
 CARPETA_DATOS = "data"
-ARCHIVO_SQLITE = os.path.join(CARPETA_DATOS, "database.db") # Corregido
+ARCHIVO_SQLITE = os.path.join(CARPETA_DATOS, "database.db") 
 ARCHIVO_ENTRADA = os.path.join(CARPETA_DATOS,"jornada.json")
 ARCHIVO_RESULTADOS = os.path.join(CARPETA_DATOS,"resultados.json")
+ARCHIVO_NOMBRES = os.path.join(CARPETA_DATOS, "nombres_fuentes.json") 
 GAMMA_DECAY = 0.95
+
+def cargar_nombres_fuentes():
+    """Carga el diccionario secreto de nombres si existe, si no, devuelve uno vacío."""
+    if os.path.exists(ARCHIVO_NOMBRES):
+        try:
+            with open(ARCHIVO_NOMBRES, 'r', encoding='utf-8') as archivo:
+                return json.load(archivo)
+        except json.JSONDecodeError:
+            print("⚠️ Error: Formato incorrecto en nombres_fuentes.json")
+    return {}
+
+NOMBRES_FUENTES = cargar_nombres_fuentes()
 
 # ==========================================
 # 1. GESTIÓN DE ARCHIVOS
@@ -45,10 +58,12 @@ def guardar_db(db_fuentes, ruta_db=ARCHIVO_SQLITE):
 
     for liga, fuentes_liga in db_fuentes.items():
         for id_f, datos in fuentes_liga.items():
+            nombre_real = NOMBRES_FUENTES.get(id_f, datos.get('nombre', id_f))
+            
             cursor.execute('''
                 INSERT OR REPLACE INTO fuentes (id_fuente, liga, nombre, aciertos, total_predicciones)
                 VALUES (?, ?, ?, ?, ?)
-            ''', (id_f, liga, datos.get('nombre', id_f), datos['aciertos'], datos['total_predicciones']))
+            ''', (id_f, liga, nombre_real, datos['aciertos'], datos['total_predicciones']))
 
     conexion.commit()
     conexion.close()
@@ -152,7 +167,8 @@ def actualizar_estadisticas(jornada, resultados_reales, db_fuentes):
         
         for id_fuente, probs_brutas in partido['predicciones'].items():
             if id_fuente not in db_fuentes[liga]:
-                db_fuentes[liga][id_fuente] = {"nombre": id_fuente, "aciertos": 0.0, "total_predicciones": 0.0}
+                nombre_real = NOMBRES_FUENTES.get(id_fuente, id_fuente)
+                db_fuentes[liga][id_fuente] = {"nombre": nombre_real, "aciertos": 0.0, "total_predicciones": 0.0}
                 
             db_fuentes[liga][id_fuente]['total_predicciones'] += 1
             probs_limpias = limpiar_prediccion(probs_brutas)
