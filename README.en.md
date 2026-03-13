@@ -29,16 +29,20 @@ The system evaluates the weekly performance of each source and dynamically adjus
 The system uses a normalized weighted average where weights are recalculated after each matchday by evaluating historical accuracy using the **Brier Score** and a **Time Decay** factor.
 
 1. **Match Scoring:** For each match, prediction quality (from 0 to 1) is calculated using the inverted Brier Score:
-   $$Points = 1 - \frac{\sum_{i \in \{1, X, 2\}} (P_i - O_i)^2}{2}$$
+
+ $$Points = 1 - \frac{\sum_{i \in \{1, X, 2\}} (P_i - O_i)^2}{2}$$
 
 2. **Historical Update (Time Decay):** Before adding new points, the accumulated history ($T_i$) is multiplied by the decay factor ($\gamma$) defined in `GAMMA_DECAY`:
-   $$T_i(t) = T_i(t-1) \cdot \gamma + \sum Points_{current\_matchday}$$
+
+$$T_i(t) = T_i(t-1) \cdot \gamma + \sum Points_{current\_matchday}$$
 
 3. **Weight Calculation:** The weight ($W_i$) of each source is determined by its proportion of points relative to the total ecosystem:
-   $$W_i = \frac{T_i}{\sum_{j=1}^{N} T_j}$$
+
+$$W_i = \frac{T_i}{\sum_{j=1}^{N} T_j}$$
 
 4. **Consolidated Probability:** The final prediction is the weighted sum of all individual sources:
-   $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
+
+$$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 
 ## 📂 Project Structure
 
