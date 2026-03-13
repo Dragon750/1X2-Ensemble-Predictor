@@ -29,16 +29,20 @@ El sistema evalúa el rendimiento semanal de cada fuente y ajusta dinámicamente
 El programa utiliza una media ponderada normalizada donde los pesos se recalculan tras cada jornada evaluando la precisión histórica mediante el **Brier Score** y un factor de **Decaimiento Temporal**.
 
 1. **Puntuación por partido:** Para cada partido, se calcula la calidad de la predicción (de 0 a 1) usando el Brier Score invertido:
-   $$Puntos = 1 - \frac{\sum_{i \in \{1, X, 2\}} (P_i - O_i)^2}{2}$$
+
+$$Puntos = 1 - \frac{\sum_{i \in \{1, X, 2\}} (P_i - O_i)^2}{2}$$
 
 2. **Actualización del Historial (Time Decay):** Antes de sumar los nuevos aciertos, el historial acumulado ($T_i$) se multiplica por el factor de decaimiento ($\gamma$) definido en `GAMMA_DECAY`:
-   $$T_i(t) = T_i(t-1) \cdot \gamma + \sum Puntos_{jornada\_actual}$$
+
+$$T_i(t) = T_i(t-1) \cdot \gamma + \sum Puntos_{jornada\_actual}$$
 
 3. **Cálculo de Pesos:** El peso ($W_i$) de cada fuente se determina por su proporción de puntos sobre el total del ecosistema:
-   $$W_i = \frac{T_i}{\sum_{j=1}^{N} T_j}$$
+
+$$W_i = \frac{T_i}{\sum_{j=1}^{N} T_j}$$
 
 4. **Probabilidad Consolidada:** La predicción final es la suma ponderada de todas las fuentes:
-   $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
+
+$$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 
 ## 📂 Estructura del Proyecto
 
