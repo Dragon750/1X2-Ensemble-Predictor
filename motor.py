@@ -111,7 +111,14 @@ def calcular_jornada(jornada, db_fuentes):
     resultados_jornada = []
     
     for partido in jornada:
-        liga = partido.get('liga', 'General')
+        if 'liga' not in partido or not partido['liga'].strip():
+            local = partido.get('local', 'Desconocido')
+            visitante = partido.get('visitante', 'Desconocido')
+            print(f"\n❌ ERROR CRÍTICO: El partido '{local} vs {visitante}' no tiene una liga asignada.")
+            print("⚠️ Ejecución cancelada. Añade el campo 'liga' en data/jornada.json y vuelve a intentarlo.\n")
+            exit(1) 
+            
+        liga = partido['liga']
         prob_finales = {'1': 0.0, 'X': 0.0, '2': 0.0}
         
         # Recopilamos las tasas de acierto (en memoria, sin alterar db_fuentes)
@@ -128,10 +135,7 @@ def calcular_jornada(jornada, db_fuentes):
         
         for id_fuente, probs_brutas in partido['predicciones'].items():
             probs_limpias = limpiar_prediccion(probs_brutas)
-            
-            # Sacamos su tasa del diccionario temporal que acabamos de crear
             tasa = tasas_partido[id_fuente]
-            
             peso = tasa / suma_tasas if suma_tasas > 0 else (1.0 / len(partido['predicciones']))
             
             prob_finales['1'] += peso * probs_limpias['1']
@@ -147,20 +151,23 @@ def calcular_jornada(jornada, db_fuentes):
     return resultados_jornada
 
 def actualizar_estadisticas(jornada, resultados_reales, db_fuentes):
-    # 1. Aplicar Time Decay a todas las fuentes y ligas
     for liga in db_fuentes:
         for id_fuente in db_fuentes[liga]:
             db_fuentes[liga][id_fuente]['aciertos'] *= GAMMA_DECAY
             db_fuentes[liga][id_fuente]['total_predicciones'] *= GAMMA_DECAY
 
-    # 2. Evaluar nueva jornada
     for partido in jornada:
         id_p = str(partido['id_partido'])
         if id_p not in resultados_reales or resultados_reales[id_p] == "?":
             continue
             
+        # --- NUEVA VALIDACIÓN ESTRICTA ---
+        if 'liga' not in partido or not partido['liga'].strip():
+            print(f"\n❌ ERROR CRÍTICO al actualizar: Un partido (ID {id_p}) no tiene liga asignada.")
+            exit(1)
+            
         resultado_real = resultados_reales[id_p]
-        liga = partido.get('liga', 'General')
+        liga = partido['liga']
         
         if liga not in db_fuentes:
             db_fuentes[liga] = {}
@@ -194,14 +201,18 @@ def guardar_historial_jornada(jornada, resultados_reales, ruta_db=ARCHIVO_SQLITE
         if id_temporal not in resultados_reales or resultados_reales[id_temporal] == "?":
             continue
             
+        # Validamos también aquí por si acaso
+        if 'liga' not in partido or not partido['liga'].strip():
+            conexion.close()
+            exit(1)
+            
         resultado = resultados_reales[id_temporal]
-        liga = partido.get('liga', 'General')
+        liga = partido['liga']
         
         local_limpio = partido['local'].replace(" ", "")
         visitante_limpio = partido['visitante'].replace(" ", "")
         id_db = f"{local_limpio}_{visitante_limpio}_{fecha_actual}"
         
-        # Insertar partido con la liga
         cursor.execute('''
             INSERT OR IGNORE INTO partidos (id_partido, liga, local, visitante, resultado_real)
             VALUES (?, ?, ?, ?, ?)
