@@ -12,13 +12,13 @@ The system evaluates the weekly performance of each source and dynamically adjus
 
 * **Probabilistic Evaluation (Brier Score):** The system doesn't evaluate predictions as a simple "hit or miss". It uses the inverted *Brier Score* to heavily penalize sources that fail predictions they were highly confident about, and rewards those that are precise and well-calibrated.
 
-* **Relational Database (SQLite):** Keeps a full, immutable history of all matches, exact odds, and real outcomes, enabling advanced analytics and SQL querying in the future.
+* **League Segmentation:** The database now stores performance metrics separated by league. A source might be highly weighted in the Premier League but penalized in LaLiga.
 
-* **Hybrid Architecture (JSON + DB):** Uses JSON files as temporary input buffers for human-friendly data entry, while the core engine safely handles data persistence in SQLite.
+* **Fair In-Memory Initialization (1/3):** If a source is new to a specific league, the engine temporarily assigns it a natural 33.33% (1/3) hit probability for weight distribution, keeping the database clean of empty profiles.
 
-* **Dynamic Weight Updating:** Sources compete against each other. After each matchday, the program evaluates the Brier score of each source and recalculates its weight for the next prediction.
+* **Relational Database (SQLite):** Keeps a full, immutable history of all matches, exact odds, and real outcomes.
 
-* **Scalable Architecture:** The code is completely separated from the data, allowing you to add infinite sources or matches without touching a single line of logic.
+* **Backup System:** Includes a quick script to extract all historical data and save it securely into a JSON file.
 
 * **Missing Data Handling:** If a source fails to publish data for a specific week, the system recalculates weights proportionally using only the available sources.
 
@@ -49,60 +49,47 @@ $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 ```text
 1X2-predictor/
 │
-├── data/                   # 📁 Data (Ignored in version control)
-│   ├── database.db         # SQLite database (History of matches and sources)
-│   ├── jornada.json        # Current matchday odds and probabilities
-│   └── resultados.json     # Real outcomes to feed back the model
+├── data/                       # 📁 Data (Ignored in version control)
+│   ├── database.db             # SQLite database (History of matches and sources)
+│   ├── fuentes_backup.json     # Backup of historical source data
+│   ├── jornada.json            # Current matchday odds and probabilities
+│   └── resultados.json         # Real outcomes to feed back the model
 │
-├── motor.py                    # ⚙️ Core: Math logic and JSON parsing
+├── motor.py                    # ⚙️ Core logic and JSON parsing
+├── set_up_db.py                # 🛠️ Database initialization script
+├── backup_fuentes.py           # 💾 JSON backup generator script
 ├── calcular_probs.py           # ▶️ Pre-match execution script
 ├── actualizar_fuentes.py       # ▶️ Post-match execution script
 ├── README.md                   # 📄 Project documentation (Spanish)
 └── README.en.md                # 📄 Project documentation (English)
 ```
 
-### ⚙️ Model Configuration
-
-In the header of motor.py, you can adjust the GAMMA_DECAY variable:
-
-* 1.0: The model retains all historical data equally (no decay).
-
-* 0.95: Recommended. A balance between long-term history and current form.
-
-* 0.80: The model forgets the past quickly and highly prioritizes the last 2-3 weeks.
-
 ## 📄 Data Files Examples
 
 For the algorithm to work correctly, the files hosted in the `data/` folder must respect the following JSON structure:
 
 ### 1. Matchday Input (`data/jornada.json`)
-It supports both traditional odds (greater than 1) and direct probabilities (less than 1). The system standardizes them automatically.
+
+It supports both traditional odds (greater than 1) and direct probabilities (less than 1). The system standardizes them automatically. **The `liga`(league) tag is now required**.
 
 ```json
 [
     {
         "id_partido": 1,
-        "local": "Real Madrid",
-        "visitante": "Barcelona",
+        "liga": "Premier League",
+        "local": "Arsenal",
+        "visitante": "Chelsea",
         "predicciones": {
             "F1": {"1": 2.10, "X": 3.60, "2": 3.40}, 
             "F2": {"1": 0.45, "X": 0.25, "2": 0.30}  
-        }
-    },
-    {
-        "id_partido": 2,
-        "local": "Getafe",
-        "visitante": "Betis",
-        "predicciones": {
-            "F1": {"1": 0.40, "X": 0.30, "2": 0.30},
-            "F2": {"1": 0.40, "X": 0.30, "2": 0.30}
         }
     }
 ]
 ```
 
 ### 2. Real Outcomes (`data/resultados.json`)
-The match ID (key) must match the IDs defined in the matchday input. If a match is suspended or hasn't been played yet, leave it with a question mark ? or remove it from the list.
+
+The match ID (key) must match the IDs defined in the matchday input. If a match is suspended or hasn't been played yet, leave it with a question mark `?` or remove it from the list.
 
 ```json
 {
@@ -117,25 +104,22 @@ The match ID (key) must match the IDs defined in the matchday input. If a match 
 
 The system is designed for a minimalist two-step weekly workflow:
 
+0. Setup and Maintenance:
+    * **First Run**: Execute `python set_up_db.py` to generate the `database.db` file.
+
+    * **Backups**: Run `python backup_fuentes.py` anytime you want to save a secure JSON copy of your sources' histories.
+
 1. Preparation and Calculation:
 
-    1. Fill the `data/jornada.json` file with the matchday games and the odds/probabilities from your sources (e.g., Pinnacle, Opta, Forebet).
+    * Fill the `data/jornada.json` file with the matchday games and the odds/probabilities from your sources.
 
-    2. Run the calculator:
-        ```Bash
-        python calcular_probs.py
-        ```
-    3. The program will print the consolidated and precise percentages for each possible outcome (1, X, 2) in the console.
+    * Run the calculator `python calcular_probs.py` to get the league-weighted percentages.
 
 2. Model Feedback:
 
-    1. After the matchday ends, open `data/resultados.json` and replace the question marks with the real outcomes ("1", "X", or "2").
+    * After the matchday ends, open `data/resultados.json` and replace the question marks with the real outcomes `("1", "X", or "2")`.
 
-    2. Run the updater:
-        ```Bash
-        python calcular_probs.py
-        ```
-    3. The system will evaluate the predictions made on Friday, sum the hits/misses, update the `database.db` database, and show the new reliability ranking of your sources.
+    2. Run the updater `python calcular_probs.py`, and the system will recalculate metrics and see the updated league rankings.
 
 ## 📌 Fuentes Recomendadas Integradas
 The model is initially configured to balance the market's "smart money" with pure data simulations:

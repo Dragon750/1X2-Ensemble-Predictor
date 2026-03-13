@@ -12,13 +12,13 @@ El sistema evalúa el rendimiento semanal de cada fuente y ajusta dinámicamente
 
 * **Evaluación Probabilística (Brier Score):** El sistema no evalúa las predicciones como un simple "acierto o fallo". Utiliza el *Brier Score* invertido para castigar severamente a las fuentes que fallan predicciones en las que tenían mucha confianza, y premiar a aquellas que son precisas y calibradas.
 
-* **Base de Datos Relacional (SQLite):** Guarda un historial completo e inmutable de todos los partidos, probabilidades exactas y resultados reales, permitiendo análisis avanzados y consultas SQL en el futuro.
+* **Segmentación por Ligas:** La base de datos guarda el rendimiento de manera independiente para cada liga. Una fuente puede tener un peso altísimo en la Premier League y uno muy bajo en LaLiga, optimizando las predicciones.
 
-* **Arquitectura Híbrida (JSON + DB):** Utiliza archivos JSON como búferes temporales de entrada para facilitar el uso humano, mientras el motor central gestiona la persistencia de datos de forma segura en SQLite.
+* **Asignación Justa en Memoria (1/3):** Si una fuente es nueva en una liga, el motor le asigna temporalmente una probabilidad natural de acierto del 33.33% (1/3) para realizar el cálculo de pesos, sin contaminar la base de datos con perfiles vacíos.
 
-* **Actualización Dinámica de Pesos:** Tras cada jornada, el programa evalúa a cada fuente y recalcula su peso para la próxima predicción.
+* **Base de Datos Relacional (SQLite):** Guarda un historial completo e inmutable de todos los partidos, probabilidades exactas y resultados reales.
 
-* **Arquitectura Escalable:** El código está completamente separado de los datos, permitiendo añadir infinitas fuentes o partidos sin tocar una sola línea de lógica.
+* **Sistema de Backup:** Incluye una herramienta para extraer todo el historial de la base de datos y guardarlo en un JSON de seguridad.
 
 * **Manejo de Datos Faltantes:** Si una fuente no publica datos una semana, el sistema recalcula los pesos proporcionalmente solo con las fuentes disponibles.
 
@@ -49,28 +49,20 @@ $$P_{final}(R) = \sum_{i=1}^{N} W_i \cdot P_i(R)$$
 ```text
 1X2-predictor/
 │
-├── data/                   # 📁 Datos (Ignorados en control de versiones)
-│   ├── database.db         # Base de datos SQLite (Historial de partidos y fuentes)
-│   ├── jornada.json        # Cuotas y probabilidades de la jornada actual
-│   └── resultados.json     # Resultados reales para retroalimentar el modelo
+├── data/                       # 📁 Datos (Ignorados en control de versiones)
+│   ├── database.db             # Base de datos SQLite (Historial de partidos y fuentes)
+│   ├── fuentes_backup.json     # Copia de seguridad del historial de fuentes
+│   ├── jornada.json            # Cuotas y probabilidades de la jornada actual
+│   └── resultados.json         # Resultados reales para retroalimentar el modelo
 │
-├── motor.py                    # ⚙️ Core: Lógica matemática y parseo de JSON
-├── set_up_db.py                # 🛠️ Script para crear/inicializar la base de datos
+├── motor.py                    # ⚙️ Core: Lógica matemática y parseo 
+├── set_up_db.py                # 🛠️ Script para crear la base de datos
+├── backup_fuentes.py           # 💾 Script para exportar la base de datos a JSON
 ├── calcular_probs.py           # ▶️ Script de ejecución pre-partido
 ├── actualizar_fuentes.py       # ▶️ Script de ejecución post-partido
 ├── README.md                   # 📄 Documentación del proyecto (Español)
 └── README.en.md                # 📄 Documentación del proyecto (Inglés)
 ```
-
-### ⚙️ Configuración del Modelo
-
-En la cabecera de motor.py puedes ajustar la variable GAMMA_DECAY:
-
-* `1.0`: El modelo recuerda todo el historial por igual (sin decaimiento).
-
-* `0.95`: Recomendado. Equilibrio entre historial y forma actual.
-
-* `0.80`: El modelo olvida rápido el pasado y prioriza mucho las últimas 2-3 semanas.
 
 ## 📄 Ejemplos de Archivos de Datos
 
@@ -78,12 +70,13 @@ Para que el algoritmo funcione correctamente, los archivos alojados en la carpet
 
 ### 1. Entrada de la Jornada (`data/jornada.json`)
 
-Soporta tanto cuotas tradicionales (mayores a 1) como probabilidades directas (menores a 1). El sistema las estandariza de forma automática.
+Soporta tanto cuotas tradicionales (mayores a 1) como probabilidades directas (menores a 1). El sistema las estandariza de forma automática. **Es vital incluir la etiqueta `liga`**.
 
 ```json
 [
     {
         "id_partido": 1,
+        "liga": "LaLiga",
         "local": "Real Madrid",
         "visitante": "Barcelona",
         "predicciones": {
@@ -93,6 +86,7 @@ Soporta tanto cuotas tradicionales (mayores a 1) como probabilidades directas (m
     },
     {
         "id_partido": 2,
+        "liga": "LaLiga",
         "local": "Getafe",
         "visitante": "Betis",
         "predicciones": {
@@ -105,7 +99,7 @@ Soporta tanto cuotas tradicionales (mayores a 1) como probabilidades directas (m
 
 ### 2. Resultados Reales (`data/resultados.json`)
 
-El ID del partido (clave) debe coincidir con los IDs definidos en la jornada. Si un partido se suspende o no se ha jugado, déjalo con una incógnita ? o elimínalo de la lista.
+El ID del partido (clave) debe coincidir con los IDs definidos en la jornada. Si un partido se suspende o no se ha jugado, déjalo con una incógnita `?` o elimínalo de la lista.
 
 ```json
 {
@@ -120,36 +114,23 @@ El ID del partido (clave) debe coincidir con los IDs definidos en la jornada. Si
 
 El sistema está diseñado para un flujo de trabajo minimalista de dos pasos semanales:
 
-0. Inicialización (Solo la primera vez)
-Antes de empezar a usar el programa, debes generar la estructura de la base de datos:
+0. Mantenimiento e inicialización:
 
-    1. Ejecuta el script de configuración:
-        ```Bash
-        python set_up_db.py
-        ```
-        Esto creará automáticamente el archivo database.db y las tablas necesarias en la carpeta data/ sin afectar a la lógica central.
+    * **Primera vez**: Ejecuta `python set_up_db.py` para crear el archivo `database.db`.
+
+    * **Copias de seguridad**: Ejecuta `python backup_fuentes.py` cuando desees respaldar tu progreso en `fuentes_backup.json`.
 
 1. Preparación y Cálculo (Antes de la jornada):
 
-    1. Rellena el archivo `data/jornada.json` con los partidos de la jornada y las cuotas/probabilidades de tus fuentes (ej. Pinnacle, Opta, Forebet).
+    * Rellena el archivo `data/jornada.json` con los partidos de la jornada y las cuotas/probabilidades de tus fuentes.
 
-    2. Ejecuta el calculador:
-        ```Bash
-        python calcular_probs.py
-        ```
-
-    3. El programa imprimirá en consola los porcentajes consolidados y precisos para cada posible resultado (1, X, 2).
+    * Ejecuta el calculador `python calcular_probs.py` para obtener los porcentajes ponderados por liga
 
 2. Retroalimentación del Modelo:
 
-    1. Tras finalizar la jornada, abre `data/resultados.json` y sustituye las incógnitas por los resultados reales ("1", "X" o "2").
+    1. Tras finalizar la jornada, abre `data/resultados.json` y sustituye las incógnitas por los resultados reales `("1", "X" o "2")`.
 
-    2. Ejecuta el actualizador:
-        ```Bash
-        python actualizar_fuentes.py
-        ```
-
-    3. El sistema evaluará las predicciones hechas el viernes, sumará los aciertos/fallos, actualizará la base de datos `database.db` y mostrará el nuevo ranking de fiabilidad de tus fuentes.
+    2. Ejecuta el actualizador `python actualizar_fuentes.py`, y el sistema mostrará el nuevo ranking de fiabilidad por liga.
 
 ## 📌 Fuentes Recomendadas Integradas
 
