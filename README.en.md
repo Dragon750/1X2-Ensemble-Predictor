@@ -26,6 +26,8 @@ The system evaluates the weekly performance of each source and dynamically adjus
 
 * **Time Decay**: Implements a **configurable** decay factor ($\gamma$). This allows recent results to carry more weight than older ones, ensuring the model adapts quickly to changes in source performance or current trends.
 
+* **Strict Data Validation (Pydantic):** The system verifies that the input JSON files follow a strict schema and type contract. If it detects a human error (e.g., an empty field or text instead of a number), the program catches it gracefully and outputs a user-friendly message pointing to the exact match and field that needs fixing.
+
 ## 🧮 The Mathematical Model
 
 The system uses a normalized weighted average where weights are recalculated after each matchday by evaluating historical accuracy using the **Brier Score** and a **Time Decay** factor.
@@ -115,6 +117,14 @@ The match ID (key) must match the IDs defined in the matchday input. Keys must b
     "3": "2",
     "4": "?"
 }
+```
+
+## 📦 Installation
+
+The project uses external dependencies for robust data validation (Pydantic). Before running it for the first time, install the required libraries using the requirements file:
+
+```bash
+pip install -r requirements.txt
 ```
 
 ## 🚀 Workflow (How to use it)

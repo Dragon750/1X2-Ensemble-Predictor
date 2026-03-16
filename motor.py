@@ -2,6 +2,26 @@ import json
 import os
 import sqlite3
 import datetime
+from pydantic import BaseModel, ValidationError, Field
+from typing import Dict, Union
+
+# ==========================================
+# ESQUEMAS DE VALIDACIÓN (PYDANTIC)
+# ==========================================
+class PartidoSchema(BaseModel):
+    # Obligatorio. Acepta tanto el número 1 como el texto "1"
+    id_partido: Union[int, str] 
+    
+    # Field(..., min_length=1) significa:
+    # "..." -> El campo es estrictamente obligatorio (no puede faltar).
+    # "min_length=1" -> No puede ser un texto vacío "".
+    # "pattern=r'\S'" -> Impide que alguien ponga solo espacios en blanco "   ".
+    local: str = Field(..., min_length=1, pattern=r'\S')
+    visitante: str = Field(..., min_length=1, pattern=r'\S')
+    
+    # min_length=1 asegura que el diccionario no esté vacío {}.
+    # Es decir, exige que haya al menos una fuente con sus cuotas.
+    predicciones: Dict[str, Dict[str, float]] = Field(..., min_length=1)
 
 # ==========================================
 # CONFIGURACIÓN DE ARCHIVOS Y MODELO
@@ -69,14 +89,55 @@ def guardar_db(db_fuentes, ruta_db=ARCHIVO_SQLITE):
     conexion.close()
 
 def cargar_jornada(ruta_entrada=ARCHIVO_ENTRADA):
+    """Lee y valida estrictamente los datos de la semana usando Pydantic."""
     if not os.path.exists(ruta_entrada):
         print(f"Error: No se encuentra el archivo '{ruta_entrada}'.")
         return None
+    
     with open(ruta_entrada, 'r', encoding='utf-8') as archivo:
         try:
-            return json.load(archivo)
+            jornada_cruda = json.load(archivo)
+            
+            jornada_validada = []
+            for partido in jornada_cruda:
+                partido_seguro = PartidoSchema(**partido)
+                jornada_validada.append(partido_seguro.model_dump())
+                
+            print(f"✅ Se han cargado y validado {len(jornada_validada)} partidos desde '{ruta_entrada}'.")
+            return jornada_validada
+            
         except json.JSONDecodeError:
-            print(f"Error de formato en '{ruta_entrada}'.")
+            print(f"❌ Error crítico de formato en '{ruta_entrada}'. Falta alguna coma o comilla.")
+            return None
+                    
+        except ValidationError as e:
+            print(f"\n❌ Pydantic ha bloqueado la carga. Errores detectados en '{ruta_entrada}':")
+            
+            for idx, error in enumerate(e.errors()):
+                if isinstance(error['loc'][0], int):
+                    num_partido = error['loc'][0] + 1 
+                    nombre_campo = " -> ".join(str(x) for x in error['loc'][1:])
+                    ubicacion = f"Partido {num_partido}, campo [{nombre_campo}]"
+                else:
+                    ubicacion = f"Campo [{" -> ".join(str(x) for x in error['loc'])}]"
+
+                tipo_error = error['type']
+                
+                if tipo_error == 'missing':
+                    mensaje = "Falta este campo por completo. Debes añadirlo en el JSON."
+                elif tipo_error in ['string_too_short', 'string_pattern_mismatch']:
+                    mensaje = "El campo está vacío o solo tiene espacios. Escribe un texto válido (ej. 'Real Madrid')."
+                elif tipo_error == 'dict_too_short':
+                    mensaje = "El diccionario de predicciones está vacío. Añade al menos una fuente (ej. 'F1': {'1': 2.0, ...})."
+                elif 'type' in tipo_error or 'float' in tipo_error or 'int' in tipo_error:
+                    mensaje = "El formato es incorrecto."
+                else:
+                    mensaje = error['msg'] 
+
+                print(f"\nError {idx + 1} en {ubicacion}")
+                print(f"Motivo: {mensaje}")
+                
+            print("\n💡 Por favor, corrige estos fallos en tu archivo JSON y vuelve a ejecutar el programa.\n")
             return None
 
 def cargar_resultados(ruta_resultados=ARCHIVO_RESULTADOS):
@@ -121,14 +182,11 @@ def calcular_jornada(jornada, db_fuentes):
         liga = partido['liga']
         prob_finales = {'1': 0.0, 'X': 0.0, '2': 0.0}
         
-        # Recopilamos las tasas de acierto (en memoria, sin alterar db_fuentes)
         tasas_partido = {}
         for id_fuente in partido['predicciones']:
-            # Si existe en la base de datos, usamos su historial real
             if liga in db_fuentes and id_fuente in db_fuentes[liga]:
                 tasas_partido[id_fuente] = obtener_tasa_acierto(db_fuentes[liga][id_fuente])
             else:
-                # Si es nueva, le damos la probabilidad de azar (1/3) SOLO EN MEMORIA
                 tasas_partido[id_fuente] = 1.0 / 3.0
 
         suma_tasas = sum(tasas_partido.values())
@@ -161,7 +219,6 @@ def actualizar_estadisticas(jornada, resultados_reales, db_fuentes):
         if id_p not in resultados_reales or resultados_reales[id_p] == "?":
             continue
             
-        # --- NUEVA VALIDACIÓN ESTRICTA ---
         if 'liga' not in partido or not partido['liga'].strip():
             print(f"\n❌ ERROR CRÍTICO al actualizar: Un partido (ID {id_p}) no tiene liga asignada.")
             exit(1)
@@ -201,7 +258,6 @@ def guardar_historial_jornada(jornada, resultados_reales, ruta_db=ARCHIVO_SQLITE
         if id_temporal not in resultados_reales or resultados_reales[id_temporal] == "?":
             continue
             
-        # Validamos también aquí por si acaso
         if 'liga' not in partido or not partido['liga'].strip():
             conexion.close()
             exit(1)

@@ -26,6 +26,8 @@ El sistema evalúa el rendimiento semanal de cada fuente y ajusta dinámicamente
 
 * **Decaimiento Temporal (Time Decay)**: Implementa un factor de "olvido" ($\gamma$) **configurable**. Esto permite que los aciertos recientes tengan más peso que los antiguos, haciendo que el modelo se adapte rápidamente a los cambios de rendimiento o rachas de las fuentes.
 
+* **Validación Estricta de Datos (Pydantic):** El sistema verifica que los archivos JSON de entrada cumplan un contrato estricto de tipos y formatos. Si detecta un error humano (ej. un campo vacío o un texto en lugar de un número), el programa no falla, sino que lo intercepta y muestra un mensaje amigable indicando exactamente en qué partido y campo está el error.
+
 ## 🧮 El Modelo Matemático
 
 El programa utiliza una media ponderada normalizada donde los pesos se recalculan tras cada jornada evaluando la precisión histórica mediante el **Brier Score** y un factor de **Decaimiento Temporal**.
@@ -125,6 +127,14 @@ El ID del partido (clave) debe coincidir con los IDs definidos en la jornada. La
     "3": "2",
     "4": "?"
 }
+```
+
+## 📦 Instalación
+
+El proyecto utiliza dependencias externas para la validación estricta de datos (Pydantic). Antes de ejecutarlo por primera vez, instala las librerías necesarias utilizando el archivo de requisitos:
+
+```bash
+pip install -r requirements.txt
 ```
 
 ## 🚀 Flujo de Trabajo (Cómo usarlo)
