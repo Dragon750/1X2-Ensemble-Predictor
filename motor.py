@@ -10,7 +10,10 @@ from typing import Dict, Union
 # ==========================================
 class PartidoSchema(BaseModel):
     # Obligatorio. Acepta tanto el número 1 como el texto "1"
-    id_partido: Union[int, str] 
+    id_partido: Union[int, str]
+
+    # Añade esta línea para que Pydantic acepte y guarde la liga
+    liga: str = Field(..., min_length=1, pattern=r'\S') 
     
     # Field(..., min_length=1) significa:
     # "..." -> El campo es estrictamente obligatorio (no puede faltar).
