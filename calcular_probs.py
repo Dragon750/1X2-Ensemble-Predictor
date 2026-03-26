@@ -1,3 +1,5 @@
+"""Calcula y muestra las probabilidades ponderadas de la jornada."""
+
 import motor
 
 print("--- ⚽ PREPARANDO LA JORNADA ⚽ ---")

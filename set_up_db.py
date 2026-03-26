@@ -6,12 +6,12 @@ CARPETA_DATOS = os.path.join(DIRECTORIO_ACTUAL, "data")
 ARCHIVO_SQLITE = os.path.join(CARPETA_DATOS, "database.db")
 
 def inicializar_tablas_historial():
-    """Crea las tablas relacionales segmentadas por liga."""
+    """Crea las tablas relacionales base segmentadas por liga."""
     os.makedirs(CARPETA_DATOS, exist_ok=True)
     conexion = sqlite3.connect(ARCHIVO_SQLITE)
     cursor = conexion.cursor()
-    
-    # 1. Tabla de Fuentes (ahora dividida por LIGA)
+
+    # Fuentes por liga: una misma fuente puede existir en varias ligas.
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS fuentes (
             id_fuente TEXT,
@@ -23,7 +23,7 @@ def inicializar_tablas_historial():
         )
     ''')
 
-    # 2. Tabla de Partidos (ahora guarda a qué liga pertenece)
+    # Registro de partidos jugados y su resultado real.
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS partidos (
             id_partido TEXT PRIMARY KEY,
@@ -33,8 +33,8 @@ def inicializar_tablas_historial():
             resultado_real TEXT
         )
     ''')
-    
-    # 3. Tabla de Predicciones (se mantiene unida al partido)
+
+    # Predicciones históricas por partido y fuente.
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS predicciones (
             id_partido TEXT,

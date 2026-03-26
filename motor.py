@@ -1,3 +1,5 @@
+"""Lógica central para validar, combinar y evaluar predicciones 1X2."""
+
 import json
 import os
 import sqlite3
@@ -52,6 +54,7 @@ NOMBRES_FUENTES = cargar_nombres_fuentes()
 # 1. GESTIÓN DE ARCHIVOS
 # ==========================================
 def cargar_db(ruta_db=ARCHIVO_SQLITE):
+    """Lee la tabla `fuentes` y la transforma al diccionario por liga."""
     if not os.path.exists(ruta_db):
         print("Error: Base de datos SQLite no encontrada. Ejecuta set_up_db.py primero.")
         return {}
@@ -76,6 +79,7 @@ def cargar_db(ruta_db=ARCHIVO_SQLITE):
     return db_fuentes
 
 def guardar_db(db_fuentes, ruta_db=ARCHIVO_SQLITE):
+    """Persiste las métricas de cada fuente manteniendo su liga."""
     conexion = sqlite3.connect(ruta_db)
     cursor = conexion.cursor()
 
@@ -144,6 +148,7 @@ def cargar_jornada(ruta_entrada=ARCHIVO_ENTRADA):
             return None
 
 def cargar_resultados(ruta_resultados=ARCHIVO_RESULTADOS):
+    """Carga resultados reales de la jornada para actualizar estadísticas."""
     if not os.path.exists(ruta_resultados):
         print(f"Error: No se encuentra el archivo '{ruta_resultados}'.")
         return None
@@ -158,11 +163,13 @@ def cargar_resultados(ruta_resultados=ARCHIVO_RESULTADOS):
 # 2. LÓGICA MATEMÁTICA Y ACTUALIZACIÓN
 # ==========================================
 def obtener_tasa_acierto(datos_fuente):
+    """Devuelve la fiabilidad histórica de una fuente en una liga."""
     if datos_fuente['total_predicciones'] == 0:
         return 1.0/3.0
     return datos_fuente['aciertos'] / datos_fuente['total_predicciones']
 
 def limpiar_prediccion(diccionario_valores):
+    """Normaliza cuotas o probabilidades para que sumen 1."""
     if any(v > 1 for v in diccionario_valores.values()):
         probs_implicitas = {k: (1 / v) for k, v in diccionario_valores.items()}
         suma_implicitas = sum(probs_implicitas.values())
@@ -172,6 +179,7 @@ def limpiar_prediccion(diccionario_valores):
         return {k: (v / suma) for k, v in diccionario_valores.items()}
 
 def calcular_jornada(jornada, db_fuentes):
+    """Combina predicciones de varias fuentes usando pesos por rendimiento."""
     resultados_jornada = []
     
     for partido in jornada:
@@ -180,11 +188,12 @@ def calcular_jornada(jornada, db_fuentes):
             visitante = partido.get('visitante', 'Desconocido')
             print(f"\n❌ ERROR CRÍTICO: El partido '{local} vs {visitante}' no tiene una liga asignada.")
             print("⚠️ Ejecución cancelada. Añade el campo 'liga' en data/jornada.json y vuelve a intentarlo.\n")
-            exit(1) 
+            exit(1)
             
         liga = partido['liga']
         prob_finales = {'1': 0.0, 'X': 0.0, '2': 0.0}
         
+        # Peso de cada fuente en este partido según su histórico en la misma liga.
         tasas_partido = {}
         for id_fuente in partido['predicciones']:
             if liga in db_fuentes and id_fuente in db_fuentes[liga]:
@@ -212,6 +221,8 @@ def calcular_jornada(jornada, db_fuentes):
     return resultados_jornada
 
 def actualizar_estadisticas(jornada, resultados_reales, db_fuentes):
+    """Actualiza score histórico de las fuentes con decaimiento temporal."""
+    # El decaimiento evita que resultados muy antiguos dominen el ranking actual.
     for liga in db_fuentes:
         for id_fuente in db_fuentes[liga]:
             db_fuentes[liga][id_fuente]['aciertos'] *= GAMMA_DECAY
@@ -240,6 +251,7 @@ def actualizar_estadisticas(jornada, resultados_reales, db_fuentes):
             db_fuentes[liga][id_fuente]['total_predicciones'] += 1
             probs_limpias = limpiar_prediccion(probs_brutas)
             
+            # Brier score multi-clase convertido a puntuación [0, 1].
             brier_sum = 0.0
             for opcion in ['1', 'X', '2']:
                 prob_real = 1.0 if opcion == resultado_real else 0.0
@@ -252,6 +264,7 @@ def actualizar_estadisticas(jornada, resultados_reales, db_fuentes):
     return db_fuentes
 
 def guardar_historial_jornada(jornada, resultados_reales, ruta_db=ARCHIVO_SQLITE):
+    """Guarda en SQLite los partidos cerrados y predicciones normalizadas."""
     conexion = sqlite3.connect(ruta_db)
     cursor = conexion.cursor()
     fecha_actual = datetime.datetime.now().strftime("%Y%m%d")
