@@ -1,5 +1,7 @@
 # ⚽ Dynamic Ensemble 1X2 Predictive Model
 
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 *🇪🇸 Leer en [Español](README.md)*
 
 This project is a sports forecasting system built in Python that leverages the principle of **Ensemble Learning**. It aggregates odds and probabilities from multiple sources (*sharp* bookmakers and *Big Data* models) to calculate the true probability of a football match outcome (1X2).
@@ -158,3 +160,13 @@ The model is initially configured to balance the market's "smart money" with pur
 * **Predictive Models (Data Science):** Opta Analyst.
 
 * **Wisdom of the Crowds:** BeSoccer.
+
+## 📜 License
+
+This project is released under the **Apache License 2.0**.
+
+- You can use, modify, and distribute the code, including for commercial purposes.
+- It includes explicit patent protection.
+- You must retain copyright and license notices in redistributions.
+
+See the `LICENSE` file for the full text.
